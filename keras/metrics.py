@@ -1,6 +1,8 @@
 import numpy as np
 from . import backend as K
 
+def mean_squared_prediction_error(y_true, y_pred):
+    return K.mean(K.square(y_true - K.round(y_pred)))
 
 def binary_accuracy(y_true, y_pred):
     return K.mean(K.equal(y_true, K.round(y_pred)))
