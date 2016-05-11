@@ -1,8 +1,10 @@
 import numpy as np
 from . import backend as K
 
+
 def mean_squared_prediction_error(y_true, y_pred):
     return K.mean(K.square(y_true - K.round(y_pred)))
+
 
 def binary_accuracy(y_true, y_pred):
     return K.mean(K.equal(y_true, K.round(y_pred)))
@@ -75,6 +77,7 @@ def cosine_proximity(y_true, y_pred):
 
 # aliases
 mse = MSE = mean_squared_error
+mspe = MSPE = mean_squared_prediction_error
 mae = MAE = mean_absolute_error
 mape = MAPE = mean_absolute_percentage_error
 msle = MSLE = mean_squared_logarithmic_error
