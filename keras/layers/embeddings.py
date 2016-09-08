@@ -35,7 +35,7 @@ class Embedding(Layer):
           of the layer (see: [initializations](../initializations.md)),
           or alternatively, Theano function to use for weights initialization.
           This parameter is only relevant if you don't pass a `weights` argument.
-      weights: list of numpy arrays to set as initial weights.
+      weights: list of Numpy arrays to set as initial weights.
           The list should have 1 element, of shape `(input_dim, output_dim)`.
       W_regularizer: instance of the [regularizers](../regularizers.md) module
         (eg. L1 or L2 regularization), applied to the embedding matrix.
@@ -125,6 +125,8 @@ class Embedding(Layer):
         return (input_shape[0], input_length, self.output_dim)
 
     def call(self, x, mask=None):
+        if K.dtype(x) != 'int32':
+            x = K.cast(x, 'int32')
         if 0. < self.dropout < 1.:
             retain_p = 1. - self.dropout
             B = K.random_binomial((self.input_dim,), p=retain_p) * (1. / retain_p)
