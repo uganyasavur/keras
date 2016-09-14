@@ -27,6 +27,14 @@ def binary_accuracy_ignore(y_true, y_pred):
     acc_i = K.sum(acc*mask)/a
     return acc_i
 
+def binary_accuracy_ignore0(y_true, y_pred):
+    acc = K.equal(y_true, K.round(y_pred))
+    mask = K.not_equal(y_true, 0)
+    a = K.sum(mask)
+    a = a + K.equal(a, 0)
+    acc_i = K.sum(acc*mask)/a
+    return acc_i
+
 
 def categorical_accuracy(y_true, y_pred):
     return K.mean(K.equal(K.argmax(y_true, axis=-1),
