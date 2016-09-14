@@ -6,8 +6,26 @@ def mean_squared_prediction_error(y_true, y_pred):
     return K.mean(K.square(y_true - K.round(y_pred)))
 
 
+def mean_squared_prediction_error_ignore(y_true, y_pred):
+    spe = K.square(y_true - K.round(y_pred))
+    mask = K.not_equal(y_true, -12345)
+    a = K.sum(mask)
+    a = a + K.equal(a, 0)
+    mspe_i = K.sum(spe*mask)/a
+    return mspe_i
+
+
 def binary_accuracy(y_true, y_pred):
     return K.mean(K.equal(y_true, K.round(y_pred)))
+
+
+def binary_accuracy_ignore(y_true, y_pred):
+    acc = K.equal(y_true, K.round(y_pred))
+    mask = K.not_equal(y_true, -12345)
+    a = K.sum(mask)
+    a = a + K.equal(a, 0)
+    acc_i = K.sum(acc*mask)/a
+    return acc_i
 
 
 def categorical_accuracy(y_true, y_pred):
@@ -22,6 +40,15 @@ def sparse_categorical_accuracy(y_true, y_pred):
 
 def mean_squared_error(y_true, y_pred):
     return K.mean(K.square(y_pred - y_true))
+
+
+def mean_squared_error_ignore(y_true, y_pred):
+    se = K.square(y_true - K.round(y_pred))
+    mask = K.not_equal(y_true, -12345)
+    a = K.sum(mask)
+    a = a + K.equal(a, 0)
+    mse_i = K.sum(se*mask)/a
+    return mse_i
 
 
 def mean_absolute_error(y_true, y_pred):
@@ -63,6 +90,15 @@ def sparse_categorical_crossentropy(y_true, y_pred):
 
 def binary_crossentropy(y_true, y_pred):
     return K.mean(K.binary_crossentropy(y_pred, y_true))
+
+
+def binary_crossentropy_ignore(y_true, y_pred):
+    bc = K.binary_crossentropy(y_pred, y_true)
+    mask = K.not_equal(y_true, -12345)
+    a = K.sum(mask)
+    a = a + K.equal(a, 0)
+    bc_i = K.sum(bc*mask)/a
+    return bc_i
 
 
 def poisson(y_true, y_pred):

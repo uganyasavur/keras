@@ -7,6 +7,15 @@ def mean_squared_error(y_true, y_pred):
     return K.mean(K.square(y_pred - y_true), axis=-1)
 
 
+def mean_squared_error_ignore(y_true, y_pred):
+    se = K.square(y_pred - y_true)
+    mask = K.not_equal(y_true, -12345)
+    a = K.sum(mask, axis=-1)
+    a = a + K.equal(a, 0)
+    mse_i = K.sum(se*mask, axis=-1)/a
+    return mse_i
+
+
 def mean_absolute_error(y_true, y_pred):
     return K.mean(K.abs(y_pred - y_true), axis=-1)
 
@@ -46,6 +55,15 @@ def sparse_categorical_crossentropy(y_true, y_pred):
 
 def binary_crossentropy(y_true, y_pred):
     return K.mean(K.binary_crossentropy(y_pred, y_true), axis=-1)
+
+
+def binary_crossentropy_ignore(y_true, y_pred):
+    bc = K.binary_crossentropy(y_pred, y_true)
+    mask = K.not_equal(y_true, -12345)
+    a = K.sum(mask, axis=-1)
+    a = a + K.equal(a, 0)
+    bc_i = K.sum(bc*mask, axis=-1)/a
+    return bc_i
 
 
 def kullback_leibler_divergence(y_true, y_pred):
