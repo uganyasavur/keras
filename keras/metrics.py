@@ -100,6 +100,14 @@ def binary_crossentropy_ignore(y_true, y_pred):
     bc_i = K.sum(bc*mask)/a
     return bc_i
 
+def binary_crossentropy_ignore0(y_true, y_pred):
+    bc = K.binary_crossentropy(y_pred, y_true)
+    mask = K.not_equal(y_true, 0)
+    a = K.sum(mask)
+    a = a + K.equal(a, 0)
+    bc_i = K.sum(bc*mask)/a
+    return bc_i
+
 
 def poisson(y_true, y_pred):
     return K.mean(y_pred - y_true * K.log(y_pred + K.epsilon()))
