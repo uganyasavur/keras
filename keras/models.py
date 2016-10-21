@@ -108,7 +108,15 @@ def load_model(filepath, custom_objects={}):
         if type(obj) is dict:
             deserialized = {}
             for key, value in obj.items():
-                if value in custom_objects:
+                deserialized[key] = []
+                if type(value) is list:
+                    for element in value:
+                        if element in custom_objects:
+                            deserialized[key].append(custom_objects[value])
+                        else:
+                            deserialized[key].append(element)
+                    
+                elif value in custom_objects:
                     deserialized[key] = custom_objects[value]
                 else:
                     deserialized[key] = value
