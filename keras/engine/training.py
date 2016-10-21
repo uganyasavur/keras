@@ -7,6 +7,9 @@ import time
 import numpy as np
 import multiprocessing
 import threading
+
+import six
+
 try:
     import queue
 except ImportError:
@@ -450,7 +453,7 @@ def generator_queue(generator, max_q_size=10,
             q.close()
         raise
 
-    return q, _stop
+    return q, _stop, generator_threads
 
 
 class Model(Container):
@@ -635,6 +638,15 @@ class Model(Container):
         # list of same size as output_names.
         # contains tuples (metrics for output, names of metrics)
         nested_metrics = collect_metrics(metrics, self.output_names)
+
+        def append_metric(layer_num, metric_name, metric_tensor):
+            """Helper function, used in loop below"""
+            if len(self.output_names) > 1:
+                metric_name = self.output_layers[layer_num].name + '_' + metric_name
+
+            self.metrics_names.append(metric_name)
+            self.metrics_tensors.append(metric_tensor)
+
         for i in range(len(self.outputs)):
             y_true = self.targets[i]
             y_pred = self.outputs[i]
@@ -644,27 +656,28 @@ class Model(Container):
                 if metric == 'accuracy' or metric == 'acc':
                     # custom handling of accuracy (because of class mode duality)
                     output_shape = self.internal_output_shapes[i]
+                    acc_fn = None
                     if output_shape[-1] == 1 or self.loss_functions[i] == objectives.binary_crossentropy:
                         # case: binary accuracy
-                        self.metrics_tensors.append(metrics_module.binary_accuracy(y_true, y_pred))
+                        acc_fn = metrics_module.binary_accuracy
                     elif self.loss_functions[i] == objectives.sparse_categorical_crossentropy:
                         # case: categorical accuracy with sparse targets
-                        self.metrics_tensors.append(
-                            metrics_module.sparse_categorical_accuracy(y_true, y_pred))
+                        acc_fn = metrics_module.sparse_categorical_accuracy
                     else:
-                        # case: categorical accuracy with dense targets
-                        self.metrics_tensors.append(metrics_module.categorical_accuracy(y_true, y_pred))
-                    if len(self.output_names) == 1:
-                        self.metrics_names.append('acc')
-                    else:
-                        self.metrics_names.append(self.output_layers[i].name + '_acc')
+                        acc_fn = metrics_module.categorical_accuracy
+
+                    append_metric(i, 'acc', acc_fn(y_true, y_pred))
                 else:
                     metric_fn = metrics_module.get(metric)
-                    self.metrics_tensors.append(metric_fn(y_true, y_pred))
-                    if len(self.output_names) == 1:
-                        self.metrics_names.append(metric_fn.__name__)
-                    else:
-                        self.metrics_names.append(self.output_layers[i].name + '_' + metric_fn.__name__)
+                    metric_result = metric_fn(y_true, y_pred)
+
+                    if not isinstance(metric_result, dict):
+                        metric_result = {
+                            metric_fn.__name__: metric_result
+                        }
+
+                    for name, tensor in six.iteritems(metric_result):
+                        append_metric(i, name, tensor)
 
         # prepare gradient updates and state updates
         self.optimizer = optimizers.get(optimizer)
@@ -680,6 +693,8 @@ class Model(Container):
         self.test_function = None
         self.predict_function = None
 
+        self._collected_trainable_weights = collect_trainable_weights(self)
+
     def _make_train_function(self):
         if not hasattr(self, 'train_function'):
             raise Exception('You must compile your model before using it.')
@@ -689,9 +704,9 @@ class Model(Container):
             else:
                 inputs = self.inputs + self.targets + self.sample_weights
 
-            # get trainable weights
-            trainable_weights = collect_trainable_weights(self)
-            training_updates = self.optimizer.get_updates(trainable_weights, self.constraints, self.total_loss)
+            training_updates = self.optimizer.get_updates(self._collected_trainable_weights,
+                                                          self.constraints,
+                                                          self.total_loss)
             updates = self.updates + training_updates
 
             # returns loss and metrics. Updates weights at each call.
@@ -763,9 +778,9 @@ class Model(Container):
             do_validation = True
             if verbose:
                 print('Train on %d samples, validate on %d samples' %
-                      (len(ins[0]), len(val_ins[0])))
+                      (ins[0].shape[0], val_ins[0].shape[0]))
 
-        nb_train_sample = len(ins[0])
+        nb_train_sample = ins[0].shape[0]
         index_array = np.arange(nb_train_sample)
 
         self.history = cbks.History()
@@ -859,7 +874,7 @@ class Model(Container):
             or list of arrays of predictions
             (if the model has multiple outputs).
         '''
-        nb_sample = len(ins[0])
+        nb_sample = ins[0].shape[0]
         outs = []
         if verbose == 1:
             progbar = Progbar(target=nb_sample)
@@ -904,7 +919,7 @@ class Model(Container):
             and/or metrics). The attribute `model.metrics_names` will give you
             the display labels for the scalar outputs.
         '''
-        nb_sample = len(ins[0])
+        nb_sample = ins[0].shape[0]
         outs = []
         if verbose == 1:
             progbar = Progbar(target=nb_sample)
@@ -1391,8 +1406,8 @@ class Model(Container):
             self.validation_data = None
 
         # start generator thread storing batches into a queue
-        data_gen_queue, _stop = generator_queue(generator, max_q_size=max_q_size, nb_worker=nb_worker,
-                                                pickle_safe=pickle_safe)
+        data_gen_queue, _stop, generator_threads = generator_queue(generator, max_q_size=max_q_size, nb_worker=nb_worker,
+                                                                   pickle_safe=pickle_safe)
 
         callback_model.stop_training = False
         while epoch < nb_epoch:
@@ -1426,11 +1441,11 @@ class Model(Container):
                 # build batch logs
                 batch_logs = {}
                 if type(x) is list:
-                    batch_size = len(x[0])
+                    batch_size = x[0].shape[0]
                 elif type(x) is dict:
-                    batch_size = len(list(x.values())[0])
+                    batch_size = list(x.values())[0].shape[0]
                 else:
-                    batch_size = len(x)
+                    batch_size = x.shape[0]
                 batch_logs['batch'] = batch_index
                 batch_logs['size'] = batch_size
                 callbacks.on_batch_begin(batch_index, batch_logs)
@@ -1466,7 +1481,9 @@ class Model(Container):
                     if val_gen:
                         val_outs = self.evaluate_generator(validation_data,
                                                            nb_val_samples,
-                                                           max_q_size=max_q_size)
+                                                           max_q_size=max_q_size,
+                                                           nb_worker=nb_worker,
+                                                           pickle_safe=pickle_safe)
                     else:
                         # no need for try/except because
                         # data has already been validated
@@ -1487,6 +1504,10 @@ class Model(Container):
 
         _stop.set()
         if pickle_safe:
+            # Terminate all daemon processes
+            for p in generator_threads:
+                if p.is_alive():
+                    p.terminate()
             data_gen_queue.close()
         callbacks.on_train_end()
         return self.history
@@ -1521,8 +1542,8 @@ class Model(Container):
         wait_time = 0.01
         all_outs = []
         weights = []
-        data_gen_queue, _stop = generator_queue(generator, max_q_size=max_q_size, nb_worker=nb_worker,
-                                                pickle_safe=pickle_safe)
+        data_gen_queue, _stop, generator_threads = generator_queue(generator, max_q_size=max_q_size, nb_worker=nb_worker,
+                                                                   pickle_safe=pickle_safe)
 
         while processed_samples < val_samples:
             generator_output = None
@@ -1567,6 +1588,10 @@ class Model(Container):
 
         _stop.set()
         if pickle_safe:
+            # Terminate all daemon processes
+            for p in generator_threads:
+                if p.is_alive():
+                    p.terminate()
             data_gen_queue.close()
         if type(outs) is not list:
             return np.average(np.asarray(all_outs),
@@ -1602,8 +1627,8 @@ class Model(Container):
         processed_samples = 0
         wait_time = 0.01
         all_outs = []
-        data_gen_queue, _stop = generator_queue(generator, max_q_size=max_q_size, nb_worker=nb_worker,
-                                                pickle_safe=pickle_safe)
+        data_gen_queue, _stop, generator_threads = generator_queue(generator, max_q_size=max_q_size, nb_worker=nb_worker,
+                                                                   pickle_safe=pickle_safe)
 
         while processed_samples < val_samples:
             generator_output = None
@@ -1656,6 +1681,10 @@ class Model(Container):
 
         _stop.set()
         if pickle_safe:
+            # Terminate all daemon processes
+            for p in generator_threads:
+                if p.is_alive():
+                    p.terminate()
             data_gen_queue.close()
         if len(all_outs) == 1:
             return all_outs[0]
