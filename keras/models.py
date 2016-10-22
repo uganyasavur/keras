@@ -113,7 +113,7 @@ def load_model(filepath, custom_objects={}):
                 if type(value) is list:
                     for element in value:
                         if element in custom_objects:
-                            deserialized[key].append(custom_objects[value])
+                            deserialized[key].append(custom_objects[element])
                         else:
                             deserialized[key].append(element)
                     
