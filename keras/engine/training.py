@@ -335,12 +335,20 @@ def masked_metric(fn):
     `fn(y_true, y_pred, weights, mask)`.
     '''
     def masked(y_true, y_pred, mask=None):
-        # score array has n_dim = 1
-        score_array = fn(y_true, y_pred)
+        # score array has n_dim >= 2
+        score_array = fn(y_true, y_pred, axis=-1)
         if mask is not None:
             # cast the mask to floatX to avoid float64 upcasting in theaso
             mask = K.cast(mask, K.floatx())
-        return score_array
+            # apply mask to score array
+            # mask should have same shape as score array
+            score_array *= mask
+            # metric should be proportional to number of
+            # unmasked samples
+            score_array /= K.mean(mask)
+
+        # average such that scalar metric is return
+        return K.mean(score_array)
 
     return masked
 
@@ -643,6 +651,7 @@ class Model(Container):
         # create nested list with metrics
         if not metrics:
             metric_functions = [[] for _ in self.output_names]
+            names = [[] for _ in self.output_names]
         elif isinstance(metrics, list):
             # we then apply all metrics to all outputs.
             masked_metrics = [masked_metric(fetch_metric_function(metric)) for metric in metrics]
