@@ -638,8 +638,9 @@ class Model(Container):
 
 
         # prepare metrics
-        def fetch_metric_function(metric_name):
+        def get_masked_metric_function(metric_name):
             # helper function to get metric functions from metric module
+            name = metric_name
             if metric_name == 'accuracy' or metric_name == 'acc':
                 # custom handling of accuracy
                 # (because of class mode duality)
@@ -653,9 +654,10 @@ class Model(Container):
                     metric_fn = metrics_module.sparse_categorical_accuracy
                 else:
                     metric_fn = metrics_module.categorical_accuracy
+                name = 'acc'
             else:
                 metric_fn = metrics_module.get(metric_name)
-            return metric_fn
+            return masked_metric(metric_fn), name
             
         # create nested list with metrics
         if not metrics:
@@ -663,9 +665,13 @@ class Model(Container):
             names = [[] for _ in self.output_names]
         elif isinstance(metrics, list):
             # we then apply all metrics to all outputs.
-            masked_metrics = [masked_metric(fetch_metric_function(metric)) for metric in metrics]
+            metrics_and_names = [get_masked_metric_function(metric) for metric in metrics]
+            masked_metrics = [metric_and_name[0] for metric_and_name in metrics_and_names]
+            metric_names = [metric_and_name[1] for metric_and_name in metrics_and_names]
+
+            # create nested list
             metric_functions = [copy.copy(masked_metrics) for _ in self.output_names]
-            names = [copy.copy(metrics) for _ in self.output_names]
+            names = [copy.copy(metric_names) for _ in self.output_names]
         elif isinstance(metrics, dict):
             metric_functions = []
             names = []
@@ -673,19 +679,21 @@ class Model(Container):
                 output_metrics = metrics.get(name, [])
                 if not isinstance(output_metrics, list):
                     output_metrics = [output_metrics]
-                masked_metrics = [masked_metric(fetch_metric_function(metric)) for metric in output_metrics]
+                metrics_and_names = [get_masked_metric_function(metric) for metric in metrics]
+                masked_metrics = [metric_and_name[0] for metric_and_name in metrics_and_names]
+                metric_names = [metric_and_name[1] for metric_and_name in metrics_and_names]
+                # append to nested list
                 metric_functions.append(masked_metrics)
-                names.append(output_metrics)
+                names.append(metric_names)
         else:
             raise TypeError('Type of `metrics` argument not understood. '
                             'Expected a list or dictionary, found: ' +
                             str(metrics))
 
-        self.metrics = metric_functions
+        self.metrics = metrics
+        self.metric_functions = metric_functions
         self.metrics_names = ['loss']
         self.metrics_tensors = []
-
-
 
         # compute total loss
         total_loss = None
@@ -722,12 +730,13 @@ class Model(Container):
         for i in range(len(self.outputs)):
             y_true = self.targets[i]
             y_pred = self.outputs[i]
-            output_metrics = self.metrics[i]
+            output_metrics = self.metric_functions[i]
             output_names = names[i]
 
             for metric_fn, name in zip(output_metrics, output_names):
 
                 metric_result = metric_fn(y_true, y_pred, mask)
+                # metric_result = metric_fn(y_true, y_pred)
                 if not isinstance(metric_result, dict):
                     metric_result = {
                         name: metric_result
