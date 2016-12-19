@@ -3,103 +3,103 @@ from . import backend as K
 from .utils.generic_utils import get_from_module
 
 
-def binary_accuracy(y_true, y_pred):
+def binary_accuracy(y_true, y_pred, axis=None):
     '''Calculates the mean accuracy rate across all predictions for binary
     classification problems.
     '''
-    return K.mean(K.equal(y_true, K.round(y_pred)))
+    return K.mean(K.equal(y_true, K.round(y_pred)), axis=axis)
 
 
-def categorical_accuracy(y_true, y_pred):
+def categorical_accuracy(y_true, y_pred, axis=None):
     '''Calculates the mean accuracy rate across all predictions for
     multiclass classification problems.
     '''
     return K.mean(K.equal(K.argmax(y_true, axis=-1),
-                  K.argmax(y_pred, axis=-1)))
+                  K.argmax(y_pred, axis=-1)), axis=axis)
 
 
-def sparse_categorical_accuracy(y_true, y_pred):
+def sparse_categorical_accuracy(y_true, y_pred, axis=None):
     '''Same as categorical_accuracy, but useful when the predictions are for
     sparse targets.
     '''
     return K.mean(K.equal(K.max(y_true, axis=-1),
-                          K.cast(K.argmax(y_pred, axis=-1), K.floatx())))
+                          K.cast(K.argmax(y_pred, axis=-1), K.floatx())), axis=axis)
 
 
-def top_k_categorical_accuracy(y_true, y_pred, k=5):
+def top_k_categorical_accuracy(y_true, y_pred, k=5, axis=None):
     '''Calculates the top-k categorical accuracy rate, i.e. success when the
     target class is within the top-k predictions provided.
     '''
-    return K.mean(K.in_top_k(y_pred, K.argmax(y_true, axis=-1), k))
+    return K.mean(K.in_top_k(y_pred, K.argmax(y_true, axis=-1), k), axis=axis)
 
 
-def mean_squared_error(y_true, y_pred):
+def mean_squared_error(y_true, y_pred, axis=None):
     '''Calculates the mean squared error (mse) rate
     between predicted and target values.
     '''
-    return K.mean(K.square(y_pred - y_true))
+    return K.mean(K.square(y_pred - y_true), axis=axis)
 
 
-def mean_absolute_error(y_true, y_pred):
+def mean_absolute_error(y_true, y_pred, axis=None):
     '''Calculates the mean absolute error (mae) rate
     between predicted and target values.
     '''
-    return K.mean(K.abs(y_pred - y_true))
+    return K.mean(K.abs(y_pred - y_true),axis=axis)
 
 
-def mean_absolute_percentage_error(y_true, y_pred):
+def mean_absolute_percentage_error(y_true, y_pred, axis=None):
     '''Calculates the mean absolute percentage error (mape) rate
     between predicted and target values.
     '''
     diff = K.abs((y_true - y_pred) / K.clip(K.abs(y_true), K.epsilon(), np.inf))
-    return 100. * K.mean(diff)
+    return 100. * K.mean(diff, axis=axis)
 
 
-def mean_squared_logarithmic_error(y_true, y_pred):
+def mean_squared_logarithmic_error(y_true, y_pred, axis=None):
     '''Calculates the mean squared logarithmic error (msle) rate
     between predicted and target values.
     '''
     first_log = K.log(K.clip(y_pred, K.epsilon(), np.inf) + 1.)
     second_log = K.log(K.clip(y_true, K.epsilon(), np.inf) + 1.)
-    return K.mean(K.square(first_log - second_log))
+    return K.mean(K.square(first_log - second_log), axis=axis)
 
 
-def hinge(y_true, y_pred):
+def hinge(y_true, y_pred, axis=None):
     '''Calculates the hinge loss, which is defined as
     `max(1 - y_true * y_pred, 0)`.
     '''
-    return K.mean(K.maximum(1. - y_true * y_pred, 0.))
+    return K.mean(K.maximum(1. - y_true * y_pred, 0.), axis=axis)
 
 
-def squared_hinge(y_true, y_pred):
+def squared_hinge(y_true, y_pred, axis=None):
     '''Calculates the squared value of the hinge loss.
     '''
-    return K.mean(K.square(K.maximum(1. - y_true * y_pred, 0.)))
+    return K.mean(K.square(K.maximum(1. - y_true * y_pred, 0.)), axis=axis)
 
 
-def categorical_crossentropy(y_true, y_pred):
+def categorical_crossentropy(y_true, y_pred, axis=None):
     '''Calculates the cross-entropy value for multiclass classification
     problems. Note: Expects a binary class matrix instead of a vector
     of scalar classes.
     '''
-    return K.mean(K.categorical_crossentropy(y_pred, y_true))
+    return K.mean(K.categorical_crossentropy(y_pred, y_true), axis=axis)
 
 
-def sparse_categorical_crossentropy(y_true, y_pred):
+def sparse_categorical_crossentropy(y_true, y_pred, axis=None):
     '''Calculates the cross-entropy value for multiclass classification
     problems with sparse targets. Note: Expects an array of integer
     classes. Labels shape must have the same number of dimensions as
     output shape. If you get a shape error, add a length-1 dimension
     to labels.
     '''
-    return K.mean(K.sparse_categorical_crossentropy(y_pred, y_true))
+    return K.mean(K.sparse_categorical_crossentropy(y_pred, y_true), axis=axis)
 
 
-def binary_crossentropy(y_true, y_pred):
+def binary_crossentropy(y_true, y_pred, axis=None):
     '''Calculates the cross-entropy value for binary classification
     problems.
     '''
-    return K.mean(K.binary_crossentropy(y_pred, y_true))
+    return K.mean(K.binary_crossentropy(y_pred, y_true), axis=axis)
 
 
 def kullback_leibler_divergence(y_true, y_pred):
@@ -111,22 +111,22 @@ def kullback_leibler_divergence(y_true, y_pred):
     return K.sum(y_true * K.log(y_true / y_pred), axis=-1)
 
 
-def poisson(y_true, y_pred):
+def poisson(y_true, y_pred, axis=None):
     '''Calculates the poisson function over prediction and target values.
     '''
-    return K.mean(y_pred - y_true * K.log(y_pred + K.epsilon()))
+    return K.mean(y_pred - y_true * K.log(y_pred + K.epsilon()), axis=axis)
 
 
-def cosine_proximity(y_true, y_pred):
+def cosine_proximity(y_true, y_pred, axis=None):
     '''Calculates the cosine similarity between the prediction and target
     values.
     '''
     y_true = K.l2_normalize(y_true, axis=-1)
     y_pred = K.l2_normalize(y_pred, axis=-1)
-    return -K.mean(y_true * y_pred)
+    return -K.mean(y_true * y_pred, axis=axis)
 
 
-def matthews_correlation(y_true, y_pred):
+def matthews_correlation(y_true, y_pred, axis=None):
     '''Calculates the Matthews correlation coefficient measure for quality
     of binary classification problems.
     '''
