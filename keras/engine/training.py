@@ -640,7 +640,6 @@ class Model(Container):
         # prepare metrics
         def get_masked_metric_function(metric_name):
             # helper function to get metric functions from metric module
-            name = metric_name
             if metric_name == 'accuracy' or metric_name == 'acc':
                 # custom handling of accuracy
                 # (because of class mode duality)
@@ -657,6 +656,7 @@ class Model(Container):
                 name = 'acc'
             else:
                 metric_fn = metrics_module.get(metric_name)
+                name = metric_fn.__name__
             return masked_metric(metric_fn), name
             
         # create nested list with metrics
@@ -679,7 +679,7 @@ class Model(Container):
                 output_metrics = metrics.get(name, [])
                 if not isinstance(output_metrics, list):
                     output_metrics = [output_metrics]
-                metrics_and_names = [get_masked_metric_function(metric) for metric in metrics]
+                metrics_and_names = [get_masked_metric_function(metric) for metric in output_metrics]
                 masked_metrics = [metric_and_name[0] for metric_and_name in metrics_and_names]
                 metric_names = [metric_and_name[1] for metric_and_name in metrics_and_names]
                 # append to nested list
@@ -736,7 +736,6 @@ class Model(Container):
             for metric_fn, name in zip(output_metrics, output_names):
 
                 metric_result = metric_fn(y_true, y_pred, mask)
-                # metric_result = metric_fn(y_true, y_pred)
                 if not isinstance(metric_result, dict):
                     metric_result = {
                         name: metric_result
