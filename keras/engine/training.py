@@ -7,7 +7,6 @@ import time
 import numpy as np
 import multiprocessing
 import threading
-import warnings
 
 import six
 
@@ -340,7 +339,7 @@ def masked_metric(fn):
             if fn.__name__ in ['kullback_leibler_divergence', 'matthews_correlation', 'precision', 'recall', 'fbeta_score', 'fmeasure']:
                 warnings.warn("Masking not implemented for %" % fn.__name__)
                 return fn(y_true, y_pred)
-            elif fn.__name__ in ['binary_accuracy', 'categorical_accuracy', 'sparse_categorical_accuracy', 'top_k_categorical_accuracy', 'cosine_proximity', 'categorical_crossentropy', 'sparse_categorical_crossentropy', 'binary_crossentropy']:
+            elif fn.__name__ in ['categorical_accuracy', 'sparse_categorical_accuracy', 'top_k_categorical_accuracy', 'cosine_proximity', 'categorical_crossentropy', 'sparse_categorical_crossentropy', 'binary_crossentropy']:
                 warnings.warn("Masking not tested for metric %s" % fn.__name__)
 
             score_array = fn(y_true, y_pred, axis=-1)
