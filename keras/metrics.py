@@ -102,7 +102,7 @@ def binary_crossentropy(y_true, y_pred, axis=None):
     return K.mean(K.binary_crossentropy(y_pred, y_true), axis=axis)
 
 
-def kullback_leibler_divergence(y_true, y_pred):
+def kullback_leibler_divergence(y_true, y_pred, axis=None):
     '''Calculates the Kullback-Leibler (KL) divergence between prediction
     and target values.
     '''

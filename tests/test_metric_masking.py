@@ -27,70 +27,113 @@ def test_masking():
     assert metric == 0
 
 @keras_test
+def test_sparse_categorical_crossentropy():
+    _masking_function_test('sparse_categorical_crossentropy', input_shape=(3,4,5), target_shape=(3,4,1), target_type=int)
+
+
+@keras_test
+def test_categorical_accuracy():
+    _masking_function_test('categorical_accuracy', target_type=float)
+
+
+@keras_test
+def test_sparse_categorical_accuracy():
+    _masking_function_test('sparse_categorical_accuracy', input_shape=(3,4,5), target_shape=(3,4,1), target_type=int)
+
+
+@keras_test
+def top_k_categorical_accuracy():
+    _masking_function_test('top_k_categorical_accuracy', input_shape=(3,4,5), target_shape=(3,4,1), target_type=int)
+
+
+@keras_test
+def test_categorical_crossentropy():
+    _masking_function_test('categorical_crossentropy', target_type=int)
+
+
+@keras_test
+def test_binary_crossentropy():
+    _masking_function_test('binary_crossentropy', target_type=float)
+
+
+@keras_test
 def test_masking_binary_accuracy():
-    _masking_function_test('binary_accuracy', shape=(3,4,1))
+    _masking_function_test('binary_accuracy', target_type=int)
 
 @keras_test
 def test_masking_mse():
-    _masking_function_test('mse')
+    _masking_function_test('mse', target_type=float)
 
 @keras_test
 def test_masking_mae():
-    _masking_function_test('mae')
+    _masking_function_test('mae', target_type=float)
 
 @keras_test
 def test_masking_mape():
-    _masking_function_test('mape')
+    _masking_function_test('mape', target_type=float)
 
 @keras_test
 def test_masking_msle():
-    _masking_function_test('msle')
+    _masking_function_test('msle', target_type=float)
 
 @keras_test
 def test_masking_hinge():
-    _masking_function_test('hinge')
+    _masking_function_test('hinge', target_type=float)
 
 @keras_test
 def test_masking_squared_hinge():
-    _masking_function_test('squared_hinge')
+    _masking_function_test('squared_hinge', target_type=float)
 
 @keras_test
 def test_masking_poisson():
-    _masking_function_test('poisson')
+    _masking_function_test('poisson', target_type=float)
+
+@keras_test
+def test_masking_cosine_proximity():
+    _masking_function_test('cosine_proximity', target_type=float)
 
 
-def _masking_function_test(fn_name, shape=(3,4,2)):
+def _masking_function_test(fn_name, input_shape=(3,4,5), target_shape=(3,4,5), target_type=float):
     # test if masked_metric and original metric
     # give the same result
     fn = metrics.get(fn_name)
     fn_masked = masked_metric(fn)
-    shape = (3, 4, 2)
-    X1 = np.arange(np.prod(shape)).reshape(shape)
-    padding_shape = list(shape)
+    X1 = np.random.ranf(np.prod(input_shape)).reshape(input_shape)
+    padding_shape = list(input_shape)
     padding_shape[1] = 1
     padding_shape = tuple(padding_shape)
-    X2 = np.concatenate((X1, np.random.rand(np.prod(padding_shape)).reshape(padding_shape)), axis=1)
+    X2 = np.concatenate((X1, np.random.ranf(np.prod(padding_shape)).reshape(padding_shape)), axis=1)
 
-    Y1 = 2*X1
-    Y2 = 2*X2
+    target_padding_shape = list(target_shape)
+    target_padding_shape[1] = 1
+    target_padding_shape = tuple(target_padding_shape)
 
-    mask = np.ones((shape[0],shape[1]+1))
+    if target_type == int:
+        Y1 = np.random.randint(0, target_shape[-1], np.prod(target_shape)).reshape(target_shape)
+        Y2 = np.concatenate((Y1, np.random.randint(0, target_shape[-1], np.prod(target_padding_shape)).reshape(target_padding_shape)), axis=1)
+
+    elif target_type == float:
+        Y1 = np.random.random(np.prod(target_shape)).reshape(target_shape)
+        Y2 = np.concatenate((Y1, np.random.ranf(np.prod(target_padding_shape)).reshape(target_padding_shape)), axis=1)
+
+
+    mask = np.ones((target_shape[0],target_shape[1]+1))
     mask[:,-1] = 0
 
-    mse_X1_Y1         = K.eval(fn(K.variable(X1),
-                            K.variable(Y1)))
+    mse_X1_Y1         = K.eval(fn(K.variable(Y1),
+                            K.variable(X1)))
 
-    mse_X1_Y1_mask_fn = K.eval(fn_masked(K.variable(X1),
-                            K.variable(Y1)))
+    mse_X1_Y1_mask_fn = K.eval(fn_masked(K.variable(Y1),
+                            K.variable(X1)))
 
-    mse_X2_Y2         = K.eval(fn(K.variable(X2),
-                            K.variable(Y2)))
+    mse_X2_Y2         = K.eval(fn(K.variable(Y2),
+                            K.variable(X2)))
 
-    mse_X2_Y2_mask_fn = K.eval(fn_masked(K.variable(X2),
-                                   K.variable(Y2)))
+    mse_X2_Y2_mask_fn = K.eval(fn_masked(K.variable(Y2),
+                                   K.variable(X2)))
 
-    mse_X2_Y2_masked  = K.eval(fn_masked(K.variable(X2),
-                                   K.variable(Y2),
+    mse_X2_Y2_masked  = K.eval(fn_masked(K.variable(Y2),
+                                   K.variable(X2),
                                    K.variable(mask)))
 
     # without mask metric output should be independent of
@@ -107,4 +150,5 @@ def _masking_function_test(fn_name, shape=(3,4,2)):
 
 
 if __name__ == '__main__':
+    np.random.seed(1989)
     pytest.main([__file__])

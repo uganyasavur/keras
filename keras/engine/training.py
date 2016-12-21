@@ -336,13 +336,15 @@ def masked_metric(fn):
     '''
     def masked(y_true, y_pred, mask=None):
         if mask is not None:
+            axis = -1
             if fn.__name__ in ['kullback_leibler_divergence', 'matthews_correlation', 'precision', 'recall', 'fbeta_score', 'fmeasure']:
                 warnings.warn("Masking not implemented for %" % fn.__name__)
                 return fn(y_true, y_pred)
-            elif fn.__name__ in ['categorical_accuracy', 'sparse_categorical_accuracy', 'top_k_categorical_accuracy', 'cosine_proximity', 'categorical_crossentropy', 'sparse_categorical_crossentropy', 'binary_crossentropy']:
-                warnings.warn("Masking not tested for metric %s" % fn.__name__)
 
-            score_array = fn(y_true, y_pred, axis=-1)
+            elif fn.__name__ in ['sparse_categorical_accuracy', 'top_k_categorical_accuracy', 'categorical_accuracy', 'categorical_crossentropy', 'sparse_categorical_crossentropy']:
+                axis = ()
+
+            score_array = fn(y_true, y_pred, axis=axis)
             # cast the mask to floatX to avoid float64 upcasting in theaso
             mask = K.cast(mask, K.floatx())
             # apply mask to score array
@@ -351,6 +353,9 @@ def masked_metric(fn):
             # metric should be proportional to number of
             # unmasked samples
             score_array /= K.mean(mask)
+
+            if __name__ == 'kullback_leibler_divergence':
+                return score_array
 
             # average such that scalar metric is return
             return K.mean(score_array)
