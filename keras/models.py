@@ -97,7 +97,6 @@ def save_model(model, filepath, overwrite=True):
 def load_model(filepath, custom_objects={}):
 
     def deserialize(obj):
-
         if type(obj) is list:
             deserialized = []
             for value in obj:
@@ -120,7 +119,6 @@ def load_model(filepath, custom_objects={}):
 >>>>>>> 24569ef4391e08e971eddd0c3f2bf641fe448ee2
                         else:
                             deserialized[key].append(element)
-                    
                 elif value in custom_objects:
                     deserialized[key] = custom_objects[value]
                 else:
