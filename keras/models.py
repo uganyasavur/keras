@@ -143,6 +143,7 @@ def load_model(filepath, custom_objects=None):
 
     # instantiate model
     model_config = f.attrs.get('model_config')
+
     if model_config is None:
         raise ValueError('No model found in config file.')
     model_config = json.loads(model_config.decode('utf-8'))
@@ -1096,3 +1097,24 @@ class Sequential(Model):
             layer = get_or_create_layer(conf)
             model.add(layer)
         return model
+
+
+class ArithmeticModel(Model):
+    """
+    A keras model with an extra attribute,
+    that describes the the mapping of the words
+    in the arithmetic language to integers that
+    the model assumes.
+    """
+    def __init__(self, input, output, dmap, name=None):
+        # call __init__ of superclass
+        super(ArithmeticModel, self).__init__(input, output, name)
+        self.dmap = dmap
+
+    def get_config(self):
+        '''Returns the model configuration
+        as a dictionary.
+        '''
+        config = super(ArithmeticModel, self).get_config()
+        config['dmap'] = self.dmap
+        return copy.deepcopy(config)

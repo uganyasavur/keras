@@ -4,7 +4,7 @@ import inspect
 from .generic_utils import get_from_module
 from .np_utils import convert_kernel
 from ..layers import *
-from ..models import Model, Sequential
+from ..models import Model, Sequential, ArithmeticModel
 from .. import backend as K
 
 
@@ -30,6 +30,8 @@ def layer_from_config(config, custom_objects=None):
         layer_class = Sequential
     elif class_name in ['Model', 'Container']:
         layer_class = Model
+    elif class_name == 'ArithmeticModel':
+        layer_class = ArithmeticModel
     else:
         layer_class = get_from_module(class_name, globals(), 'layer',
                                       instantiate=False)
