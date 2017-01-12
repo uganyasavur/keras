@@ -336,13 +336,19 @@ def masked_metric(fn):
     '''
     def masked(y_true, y_pred, mask=None):
         if mask is not None:
-            axis = -1
-            if fn.__name__ in ['kullback_leibler_divergence', 'matthews_correlation', 'precision', 'recall', 'fbeta_score', 'fmeasure']:
+            if fn.__name__ in ['matthews_correlation']:
                 warnings.warn("Masking not implemented for %" % fn.__name__)
                 return fn(y_true, y_pred)
 
             elif fn.__name__ in ['sparse_categorical_accuracy', 'top_k_categorical_accuracy', 'categorical_accuracy', 'categorical_crossentropy', 'sparse_categorical_crossentropy']:
                 axis = ()
+
+            elif fn.__name__ in ['precision', 'recall', 'fbeta_score', 'fmeasure']:
+                mask_reshape = K.expand_dims(mask, -1)
+                return fn(y_true*mask_reshape, y_pred*mask_reshape)
+            
+            else:
+                axis = -1
 
             score_array = fn(y_true, y_pred, axis=axis)
             # cast the mask to floatX to avoid float64 upcasting in theaso
@@ -353,9 +359,6 @@ def masked_metric(fn):
             # metric should be proportional to number of
             # unmasked samples
             score_array /= K.mean(mask)
-
-            if __name__ == 'kullback_leibler_divergence':
-                return score_array
 
             # average such that scalar metric is return
             return K.mean(score_array)

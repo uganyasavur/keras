@@ -48,7 +48,7 @@ def mean_absolute_error(y_true, y_pred, axis=None):
     '''Calculates the mean absolute error (mae) rate
     between predicted and target values.
     '''
-    return K.mean(K.abs(y_pred - y_true),axis=axis)
+    return K.mean(K.abs(y_pred - y_true), axis=axis)
 
 
 def mean_absolute_percentage_error(y_true, y_pred, axis=None):
@@ -112,7 +112,7 @@ def kullback_leibler_divergence(y_true, y_pred, axis=None):
     '''
     y_true = K.clip(y_true, K.epsilon(), 1)
     y_pred = K.clip(y_pred, K.epsilon(), 1)
-    return K.mean(K.sum(y_true * K.log(y_true / y_pred), axis=-1))
+    return K.mean(K.sum(y_true * K.log(y_true / y_pred), axis=-1), axis=axis)
 
 
 def poisson(y_true, y_pred, axis=None):
