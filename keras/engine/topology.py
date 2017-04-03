@@ -2432,6 +2432,7 @@ class Container(Layer):
             process_layer(layer_data)
 
         name = config.get('name')
+        config_kwargs = {k:v for k, v in config.iteritems() if k not in ['name', 'layers', 'output_layers', 'input_layers']}
         input_tensors = []
         output_tensors = []
         for layer_data in config['input_layers']:
@@ -2446,7 +2447,7 @@ class Container(Layer):
             layer = created_layers[layer_name]
             layer_output_tensors = layer.inbound_nodes[node_index].output_tensors
             output_tensors.append(layer_output_tensors[tensor_index])
-        return cls(inputs=input_tensors, outputs=output_tensors, name=name)
+        return cls(inputs=input_tensors, outputs=output_tensors, name=name, **config_kwargs)
 
     def save(self, filepath, overwrite=True, include_optimizer=True):
         """Save the model to a single HDF5 file.
